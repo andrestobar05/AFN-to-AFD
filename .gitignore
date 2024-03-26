@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Replit-specific files and directories
+.replit
+.replit.db
+
 # User-specific files
 *.rsuser
 *.suo
