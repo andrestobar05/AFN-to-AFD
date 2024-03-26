@@ -4,6 +4,11 @@
 	METODOS que ya existen, sin embargo, usted es libre de 
 	agregar los campos y metodos que desee.
 */
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 public class AFN{
 
 	/*
@@ -13,7 +18,36 @@ public class AFN{
 		la informacion del AFN (i.e. "Documentos/archivo.AFN").
 		Puede utilizar la estructura de datos que desee
 	*/
+	private String[] alfabeto;
+    private int cantEstados;
+    private int[] estadosFinales;
+	private String[][] matrizTransicion;
+
+
 	public AFN(String path){
+		String[] contenido = readFile(path).split("\n");
+		alfabeto = contenido[0].split(",");
+		cantEstados = Integer.parseInt(contenido[1]);
+		estadosFinales = new int[contenido[2].split(",").length];
+		for (int i = 0; i < estadosFinales.length; i++) {
+			estadosFinales[i] = Integer.parseInt(contenido[2].split(",")[i]);
+		}
+	}
+
+
+	public String readFile(String path){
+		// Implementar la lectura del archivo
+		StringBuilder contenido = new StringBuilder();
+		try (BufferedReader buff = new BufferedReader(new FileReader(this.path))) {
+            String linea;
+			// Leer el archivo linea por linea y almacenar el contenido en un StringBuilder
+            while ((linea = buff.readLine()) != null) {
+                contenido.append(linea).append("\n");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return contenido.toString();
 	}
 
 	/*
@@ -45,6 +79,42 @@ public class AFN{
 		de la forma que desee. 
 	*/
 	public static void main(String[] args) throws Exception{
-		
-	}
+		if (args.length < 1) {
+            System.out.println("No se proporcionó el archivo de entrada.");
+            return;
+        }
+		// Crear un AFN con el archivo de entrada
+		AFN afn = new AFN(args[0]);
+		String bandera = args[1];
+		if (bandera.equals("-f")) { // Archivo
+			if (args.length < 3) {
+				System.out.println("No se proporcionó el archivo de cuerdas.");
+				return;
+			}
+			String pathCuerda = args[2];
+			try (BufferedReader br = new BufferedReader(new FileReader(pathCuerda))) {
+				String cuerda;
+				while ((cuerda = br.readLine()) != null) {
+					System.out.println("La cadena " + (afn.accept(cuerda) ? "es" : "no es") + " aceptada por el AFN.");
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else if (bandera.equals("-i")) { // Interactivo
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
+				String cuerda;
+				while (true) {
+					System.out.print("Ingrese una cuerda (o una cuerda vacía para salir): ");
+					cuerda = br.readLine();
+					if (cuerda.length() == 0) {
+						break;
+					}
+					System.out.println("La cadena " + (afn.accept(cuerda) ? "es" : "no es") + " aceptada por el AFN.");
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else {
+			System.out.println("Bandera no reconocida.");
+		}
 }
