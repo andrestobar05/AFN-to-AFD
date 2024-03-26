@@ -38,7 +38,7 @@ public class AFN{
 	public String readFile(String path){
 		// Implementar la lectura del archivo
 		StringBuilder contenido = new StringBuilder();
-		try (BufferedReader buff = new BufferedReader(new FileReader(this.path))) {
+		try (BufferedReader buff = new BufferedReader(new FileReader(path))) {
             String linea;
 			// Leer el archivo linea por linea y almacenar el contenido en un StringBuilder
             while ((linea = buff.readLine()) != null) {
@@ -117,4 +117,5 @@ public class AFN{
 		} else {
 			System.out.println("Bandera no reconocida.");
 		}
+	}
 }
