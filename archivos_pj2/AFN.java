@@ -22,6 +22,7 @@ public class AFN{
     private int cantEstados;
     private int[] estadosFinales;
 	private String[][] matrizTransicion;
+	private int estadoActual;
 
 
 	public AFN(String path){
@@ -69,11 +70,11 @@ public class AFN{
 		un boolean dependiendo de si la cuerda es aceptada o no 
 		por el AFN. Recuerde lo aprendido en el proyecto 1.
 	*/
-	public boolean accept(String string, int estadoActual){
+	public boolean accept(String string){
 		// Caso base: si la cadena está vacía, verificamos si el estado actual es un estado de aceptación
 		if (string.isEmpty()) {
 			for (int estadoFinal : estadosFinales) {
-				if (estadoActual == estadoFinal) {
+				if (this.estadoActual == estadoFinal) {
 					return true;
 				}
 			}
@@ -99,19 +100,17 @@ public class AFN{
 			// Se obtienen los estados a los que se transiciona con el caracter
 			String[] estadosCaracter = matrizTransicion[indiceCaracter + 1][i].split(";");
 			for (String estado : estadosCaracter) {
-				if (estado.equals("0")) {
-					if (accept(cuerdaRestante, i)) {
-						return true;
-					}
+				this.estadoActual = Integer.parseInt(estado);
+				if (accept(cuerdaRestante)) {
+					return true;
 				}
 			}
 			// Se obtienen los estados a los que se transiciona con lambda
 			String[] estadosLambda = matrizTransicion[0][i].split(";");
 			for (String estado : estadosLambda) {
-				if (estado.equals("0")) {
-					if (accept(string, i)) {
-						return true;
-					}
+				this.estadoActual = Integer.parseInt(estado);
+				if (accept(string)) {
+					return true;
 				}
 			}
 		}
