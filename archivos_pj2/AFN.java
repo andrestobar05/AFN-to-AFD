@@ -25,12 +25,25 @@ public class AFN{
 
 
 	public AFN(String path){
+		// Se lee el archivo y se almacena la informacion en las variables
 		String[] contenido = readFile(path).split("\n");
+		// Se guarda el alfabeto
 		alfabeto = contenido[0].split(",");
+		// Se guarda la cantidad de estados
 		cantEstados = Integer.parseInt(contenido[1]);
+		// Se inicializa el arreglo de estados finales
 		estadosFinales = new int[contenido[2].split(",").length];
+		// Se guardan los estados finales
 		for (int i = 0; i < estadosFinales.length; i++) {
 			estadosFinales[i] = Integer.parseInt(contenido[2].split(",")[i]);
+		}
+		// Se guarda la matriz de transicion
+		matrizTransicion = new String[alfabeto.length + 1][cantEstados];
+		for (int row = 0; row <= alfabeto.length; row++) {
+			String[] transiciones = contenido[row + 3].split(","); // Se suma 3 porque las primeras 3 lineas no son transiciones
+			for (int col = 0; col < cantEstados; col++) {
+				matrizTransicion[row][col] = transiciones[col]; // Se guarda la transicion en la matriz
+			}
 		}
 	}
 
@@ -56,7 +69,54 @@ public class AFN{
 		un boolean dependiendo de si la cuerda es aceptada o no 
 		por el AFN. Recuerde lo aprendido en el proyecto 1.
 	*/
-	public boolean accept(String string){
+	public boolean accept(String string, int estadoActual){
+		// Caso base: si la cadena está vacía, verificamos si el estado actual es un estado de aceptación
+		if (string.isEmpty()) {
+			for (int estadoFinal : estadosFinales) {
+				if (estadoActual == estadoFinal) {
+					return true;
+				}
+			}
+			return false;
+		}
+	
+		// Se obtiene el primer caracter de la cuerda
+		String caracter = string.substring(0, 1);
+		// Se obtiene el indice del caracter en el alfabeto
+		int indiceCaracter = -1;
+		for (int i = 0; i < alfabeto.length; i++) {
+			if (alfabeto[i].equals(caracter)) {
+				indiceCaracter = i;
+				break;
+			}
+		}
+	
+		// Se obtiene la cuerda restante
+		String cuerdaRestante = string.substring(1);
+	
+		// Se recorre la matriz de transicion
+		for (int i = 0; i < cantEstados; i++) {
+			// Se obtienen los estados a los que se transiciona con el caracter
+			String[] estadosCaracter = matrizTransicion[indiceCaracter + 1][i].split(";");
+			for (String estado : estadosCaracter) {
+				if (estado.equals("0")) {
+					if (accept(cuerdaRestante, i)) {
+						return true;
+					}
+				}
+			}
+			// Se obtienen los estados a los que se transiciona con lambda
+			String[] estadosLambda = matrizTransicion[0][i].split(";");
+			for (String estado : estadosLambda) {
+				if (estado.equals("0")) {
+					if (accept(string, i)) {
+						return true;
+					}
+				}
+			}
+		}
+	
+		// Si no se acepta la cuerda
 		return false;
 	}
 
@@ -80,7 +140,7 @@ public class AFN{
 	*/
 	public static void main(String[] args) throws Exception{
 		if (args.length < 1) {
-            System.out.println("No se proporcionó el archivo de entrada.");
+            System.out.println("No se proporciono el archivo de entrada.");
             return;
         }
 		// Crear un AFN con el archivo de entrada
@@ -88,14 +148,14 @@ public class AFN{
 		String bandera = args[1];
 		if (bandera.equals("-f")) { // Archivo
 			if (args.length < 3) {
-				System.out.println("No se proporcionó el archivo de cuerdas.");
+				System.out.println("No se proporciono el archivo de cuerdas.");
 				return;
 			}
 			String pathCuerda = args[2];
 			try (BufferedReader br = new BufferedReader(new FileReader(pathCuerda))) {
 				String cuerda;
 				while ((cuerda = br.readLine()) != null) {
-					System.out.println("La cadena " + (afn.accept(cuerda) ? "es" : "no es") + " aceptada por el AFN.");
+					System.out.println("La cuerda " + (afn.accept(cuerda) ? "es" : "no es") + " aceptada por el AFN.");
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -109,7 +169,7 @@ public class AFN{
 					if (cuerda.length() == 0) {
 						break;
 					}
-					System.out.println("La cadena " + (afn.accept(cuerda) ? "es" : "no es") + " aceptada por el AFN.");
+					System.out.println("La cuerda " + (afn.accept(cuerda) ? "es" : "no es") + " aceptada por el AFN.");
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
