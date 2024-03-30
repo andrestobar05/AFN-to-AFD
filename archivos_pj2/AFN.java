@@ -5,12 +5,19 @@
 	agregar los campos y metodos que desee.
 */
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class AFN{
 
@@ -21,18 +28,22 @@ public class AFN{
 		la informacion del AFN (i.e. "Documentos/archivo.AFN").
 		Puede utilizar la estructura de datos que desee
 	*/
-	private String[] alfabeto;
+	private char[] alfabeto;
     private int cantEstados;
     private int[] estadosFinales;
 	private String[][] matrizTransicion;
-	private int estadoActual = 1;
+	private int estadoInicial = 1;
 
 
 	public AFN(String path){
 		// Se lee el archivo y se almacena la informacion en las variables
 		String[] contenido = readFile(path).split("\n");
 		// Se guarda el alfabeto
-		alfabeto = contenido[0].split(",");
+		String[] alfabetoStrings = contenido[0].split(",");
+		alfabeto = new char[alfabetoStrings.length];
+		for (int i = 0; i < alfabetoStrings.length; i++) {
+			alfabeto[i] = alfabetoStrings[i].charAt(0);
+		}
 		// Se guarda la cantidad de estados
 		cantEstados = Integer.parseInt(contenido[1]);
 		// Se inicializa el arreglo de estados finales
@@ -74,7 +85,7 @@ public class AFN{
 		por el AFN. Recuerde lo aprendido en el proyecto 1.
 	*/
 	public boolean accept(String string) {
-		return acceptHelper(string, this.estadoActual);
+		return acceptHelper(string, estadoInicial);
 	}
 	
 	private boolean acceptHelper(String string, int estadoActual) {
@@ -87,10 +98,10 @@ public class AFN{
 			return false;
 		}
 	
-		String caracter = string.substring(0, 1);
+		char caracter = string.charAt(0);
 		int indiceCaracter = -1;
 		for (int i = 0; i < alfabeto.length; i++) {
-			if (alfabeto[i].equals(caracter)) {
+			if (alfabeto[i] == caracter) {
 				indiceCaracter = i;
 				break;
 			}
@@ -105,12 +116,14 @@ public class AFN{
 		Collections.addAll(estadosTotales, estadosLambda);
 	
 		for (String estado : estadosTotales) {
-			int nuevoEstado = Integer.parseInt(estado);
-			if (acceptHelper(cuerdaRestante, nuevoEstado)) {
-				return true;
+			if (!estado.equals("")) {
+				int nuevoEstado = Integer.parseInt(estado);
+				if (acceptHelper(cuerdaRestante, nuevoEstado)) {
+					return true;
+				}
 			}
 		}
-	
+
 		return false;
 	}
 	
@@ -119,9 +132,75 @@ public class AFN{
 		de texto que contenga los datos de un AFD segun las especificaciones
 		del proyecto.
 	*/
-	public void toAFD(String afdPath){
+	public void toAFD(String afdPath) {
+		// Se inicializa un set de sets para guardar los estados del AFD
+		// Esto se hace porque no queremos estados repetidos
+		Set<Set<Integer>> estadosAFD = new HashSet<>();
+		// Se inicializa un mapeo de sets de estados a enteros para asignar un número a cada estado
+		Map<Set<Integer>, Integer> mapeoEstados = new HashMap<>();
+		// Se inicializa un set de sets para guardar los estados finales del AFD
+		Set<Set<Integer>> estadosFinalesAFD = new HashSet<>();
+
+		// Calcular la clausura lambda del estado inicial
+		Set<Integer> estadoInicialAFD = clausuraLambda(Collections.singleton(estadoInicial));
+
+		// Inicializar la lista de estados del AFD con el estado inicial
+		estadosAFD.add(estadoInicialAFD);
+		mapeoEstados.put(estadoInicialAFD, 1); // estado inicial es 1
+
+		// Calcular los nuevos estados del AFD
+		int nuevoEstado = 2; // comenzar desde 2
+		// Se convierte el arreglo de estados finales a un set para facilitar la búsqueda
+		Set<Integer> estadosFinalesSet = Arrays.stream(estadosFinales).boxed().collect(Collectors.toSet());
+
+		for (Set<Integer> estadoAFD : estadosAFD) {
+			for (char simbolo : alfabeto) {
+				Set<Integer> nuevoEstadoAFD = cambio(estadoAFD, simbolo);
+				nuevoEstadoAFD = clausuraLambda(nuevoEstadoAFD);
+
+				if (!estadosAFD.contains(nuevoEstadoAFD)) {
+					estadosAFD.add(nuevoEstadoAFD);
+					mapeoEstados.put(nuevoEstadoAFD, nuevoEstado);
+
+					if (nuevoEstadoAFD.stream().anyMatch(estado -> estadosFinalesSet.contains(estado))) {
+						estadosFinalesAFD.add(nuevoEstadoAFD);
+					}
+
+					nuevoEstado++;
+				}
+			}
+		}
+		// Se escribe el AFD en un archivo
+		try (BufferedWriter bw = new BufferedWriter(new FileWriter(afdPath))) {
+			// Escribir el alfabeto
+			bw.write(String.join(",", Arrays.stream(alfabeto).mapToObj(String::valueOf).collect(Collectors.toList())));
+			bw.newLine();
+			// Escribir la cantidad de estados
+			bw.write(String.valueOf(estadosAFD.size()));
+			bw.newLine();
+			// Escribir los estados finales
+			bw.write(String.join(",", estadosFinalesAFD.stream().map(estado -> String.valueOf(mapeoEstados.get(estado))).collect(Collectors.toList())));
+			bw.newLine();
+			// Escribir la matriz de transición
+			for (int i = 0; i < alfabeto.length; i++) {
+				bw.write(String.join(",", estadosAFD.stream().map(estado -> String.join(";", cambio(estado, alfabeto[i]).stream().map(String::valueOf).collect(Collectors.toList()))).collect(Collectors.toList()));
+				bw.newLine();
+			}
+			bw.write(String.join(",", estadosAFD.stream().map(estado -> String.join(";", clausuraLambda(estado).stream().map(String::valueOf).collect(Collectors.toList()))).collect(Collectors.toList()));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
+	// Método para calcular la clausura lambda de un conjunto de estados
+	private Set<Integer> clausuraLambda(Set<Integer> estados) {
+		// Implementar el cálculo de la clausura lambda
+	}
+
+	// Método para calcular el conjunto de estados alcanzables por un símbolo desde un conjunto de estados
+	private Set<Integer> cambio(Set<Integer> estados, char simbolo) {
+		// Implementar el cálculo del conjunto de estados alcanzables por un símbolo
+	}
 	/*
 		El metodo main debe recibir como primer argumento el path
 		donde se encuentra el archivo ".afd", como segundo argumento 
