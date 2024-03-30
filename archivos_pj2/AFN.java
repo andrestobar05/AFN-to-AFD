@@ -8,6 +8,9 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public class AFN{
 
@@ -22,7 +25,7 @@ public class AFN{
     private int cantEstados;
     private int[] estadosFinales;
 	private String[][] matrizTransicion;
-	private int estadoActual;
+	private int estadoActual = 1;
 
 
 	public AFN(String path){
@@ -70,20 +73,21 @@ public class AFN{
 		un boolean dependiendo de si la cuerda es aceptada o no 
 		por el AFN. Recuerde lo aprendido en el proyecto 1.
 	*/
-	public boolean accept(String string){
-		// Caso base: si la cadena está vacía, verificamos si el estado actual es un estado de aceptación
+	public boolean accept(String string) {
+		return acceptHelper(string, this.estadoActual);
+	}
+	
+	private boolean acceptHelper(String string, int estadoActual) {
 		if (string.isEmpty()) {
 			for (int estadoFinal : estadosFinales) {
-				if (this.estadoActual == estadoFinal) {
+				if (estadoActual == estadoFinal) {
 					return true;
 				}
 			}
 			return false;
 		}
 	
-		// Se obtiene el primer caracter de la cuerda
 		String caracter = string.substring(0, 1);
-		// Se obtiene el indice del caracter en el alfabeto
 		int indiceCaracter = -1;
 		for (int i = 0; i < alfabeto.length; i++) {
 			if (alfabeto[i].equals(caracter)) {
@@ -92,33 +96,24 @@ public class AFN{
 			}
 		}
 	
-		// Se obtiene la cuerda restante
 		String cuerdaRestante = string.substring(1);
+		String[] estadosCaracter = matrizTransicion[indiceCaracter + 1][estadoActual].split(";");
+		String[] estadosLambda = matrizTransicion[0][estadoActual].split(";");
 	
-		// Se recorre la matriz de transicion
-		for (int i = 0; i < cantEstados; i++) {
-			// Se obtienen los estados a los que se transiciona con el caracter
-			String[] estadosCaracter = matrizTransicion[indiceCaracter + 1][i].split(";");
-			for (String estado : estadosCaracter) {
-				this.estadoActual = Integer.parseInt(estado);
-				if (accept(cuerdaRestante)) {
-					return true;
-				}
-			}
-			// Se obtienen los estados a los que se transiciona con lambda
-			String[] estadosLambda = matrizTransicion[0][i].split(";");
-			for (String estado : estadosLambda) {
-				this.estadoActual = Integer.parseInt(estado);
-				if (accept(string)) {
-					return true;
-				}
+		Set<String> estadosTotales = new HashSet<>();
+		Collections.addAll(estadosTotales, estadosCaracter);
+		Collections.addAll(estadosTotales, estadosLambda);
+	
+		for (String estado : estadosTotales) {
+			int nuevoEstado = Integer.parseInt(estado);
+			if (acceptHelper(cuerdaRestante, nuevoEstado)) {
+				return true;
 			}
 		}
 	
-		// Si no se acepta la cuerda
 		return false;
 	}
-
+	
 	/*
 		Implemente el metodo toAFD. Este metodo debe generar un archivo
 		de texto que contenga los datos de un AFD segun las especificaciones
