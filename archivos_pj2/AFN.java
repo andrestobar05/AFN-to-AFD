@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -77,58 +76,51 @@ public class AFN{
         }
         return contenido.toString();
 	}
-
+    
 	/*
 		Implemente el metodo accept, que recibe como argumento
 		un String que representa la cuerda a evaluar, y devuelve
 		un boolean dependiendo de si la cuerda es aceptada o no 
 		por el AFN. Recuerde lo aprendido en el proyecto 1.
-	*/
-	public boolean accept(String string) {
-		return acceptHelper(string, estadoInicial);
+	*/ 
+	public boolean accept(String cadena) {
+		/* Se inicializa el conjunto de estados actuales con la clausura lambda del estado inicial
+		   porque puede empezar en un solo estado inicial o en varios estados iniciales por las transiciones lambda  */
+		Set<Integer> estadosActuales = clausuraLambda(Collections.singleton(estadoInicial));
+		// Llamar al metodo recursivo
+		return acceptRecursivo(cadena, estadosActuales);
 	}
 	
-	private boolean acceptHelper(String string, int estadoActual) {
-		if (string.isEmpty()) {
+	private boolean acceptRecursivo(String cadena, Set<Integer> estadosActuales) {
+		// Caso base: Si la cadena está vacía, verificar si el conjunto de estados actuales contiene algún estado final
+		if (cadena.isEmpty()) {
 			for (int estadoFinal : estadosFinales) {
-				if (estadoActual == estadoFinal) {
+				if (estadosActuales.contains(estadoFinal)) {
 					return true;
 				}
 			}
 			return false;
 		}
 	
-		char caracter = string.charAt(0);
-		int indiceCaracter = searchIndex(alfabeto, caracter);
+		// Procesar el primer caracter de la cadena
+		char caracter = cadena.charAt(0);
+		// Calcular el conjunto de estados a los que se puede llegar con el caracter actual
+		Set<Integer> nuevosEstados = cambio(estadosActuales, caracter);
+		// Calcular la clausura lambda del nuevo conjunto de estados
+		Set<Integer> estadosSiguientes = clausuraLambda(nuevosEstados);
 	
-		String cuerdaRestante = string.substring(1);
-		String[] estadosCaracter = matrizTransicion[indiceCaracter + 1][estadoActual].split(";");
-		String[] estadosLambda = matrizTransicion[0][estadoActual].split(";");
-	
-		Set<String> estadosTotales = new HashSet<>();
-		Collections.addAll(estadosTotales, estadosCaracter);
-		Collections.addAll(estadosTotales, estadosLambda);
-	
-		for (String estado : estadosTotales) {
-			if (!estado.equals("")) {
-				int nuevoEstado = Integer.parseInt(estado);
-				if (acceptHelper(cuerdaRestante, nuevoEstado)) {
-					return true;
-				}
-			}
-		}
-
-		return false;
+		// Recursion con el resto de la cadena (sin el primer caracter) y el nuevo conjunto de estados
+		return acceptRecursivo(cadena.substring(1), estadosSiguientes);
 	}
-	
+
 	/*
 		Implemente el metodo toAFD. Este metodo debe generar un archivo
 		de texto que contenga los datos de un AFD segun las especificaciones
 		del proyecto.
 	*/
 	public void toAFD(String afdPath) {
-		// Se inicializa un set de sets para guardar los estados del AFD
-		// Esto se hace porque no queremos estados repetidos
+		/* Se inicializa un set de sets para guardar los estados del AFD
+		   Esto se hace porque no queremos estados repetidos */
 		Set<Set<Integer>> estadosAFD = new HashSet<>();
 		// Se inicializa un mapeo de sets de estados a enteros para asignar un número a cada estado
 		Map<Set<Integer>, Integer> mapeoEstados = new HashMap<>();
@@ -187,7 +179,7 @@ public class AFN{
 		}
 	}
 
-	// Método para calcular la clausura lambda de un conjunto de estados
+	// Metodo para calcular la clausura lambda de un conjunto de estados
 	private Set<Integer> clausuraLambda(Set<Integer> estados) {
 		/* Se inicializa un set para guardar la clausura lambda, inicialmente con los estados 
 		dados porque todos los estados tienen clausura lambda con ellos mismos */
@@ -210,7 +202,7 @@ public class AFN{
 		return clausura;
 	}
 
-	// Método para calcular el conjunto de estados alcanzables por un símbolo desde un conjunto de estados
+	// Metodo para calcular el conjunto de estados alcanzables por un símbolo desde un conjunto de estados
 	private Set<Integer> cambio(Set<Integer> estados, char simbolo) {
 		// Se inicializa un set para guardar los estados alcanzables
 		Set<Integer> nuevosEstados = new HashSet<>();
