@@ -99,13 +99,7 @@ public class AFN{
 		}
 	
 		char caracter = string.charAt(0);
-		int indiceCaracter = -1;
-		for (int i = 0; i < alfabeto.length; i++) {
-			if (alfabeto[i] == caracter) {
-				indiceCaracter = i;
-				break;
-			}
-		}
+		int indiceCaracter = searchIndex(alfabeto, caracter);
 	
 		String cuerdaRestante = string.substring(1);
 		String[] estadosCaracter = matrizTransicion[indiceCaracter + 1][estadoActual].split(";");
@@ -173,7 +167,8 @@ public class AFN{
 		// Se escribe el AFD en un archivo
 		try (BufferedWriter bw = new BufferedWriter(new FileWriter(afdPath))) {
 			// Escribir el alfabeto
-			bw.write(String.join(",", Arrays.stream(alfabeto).mapToObj(String::valueOf).collect(Collectors.toList())));
+			String alfabetoString = new String(alfabeto);
+			bw.write(String.join(",", alfabetoString.chars().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.toList())));
 			bw.newLine();
 			// Escribir la cantidad de estados
 			bw.write(String.valueOf(estadosAFD.size()));
@@ -183,10 +178,10 @@ public class AFN{
 			bw.newLine();
 			// Escribir la matriz de transición
 			for (int i = 0; i < alfabeto.length; i++) {
-				bw.write(String.join(",", estadosAFD.stream().map(estado -> String.join(";", cambio(estado, alfabeto[i]).stream().map(String::valueOf).collect(Collectors.toList()))).collect(Collectors.toList()));
+				final int symbolIndex = i;
+				bw.write(String.join(",", estadosAFD.stream().map(estado -> String.valueOf(mapeoEstados.get(cambio(estado, alfabeto[symbolIndex])))).collect(Collectors.toList())));
 				bw.newLine();
 			}
-			bw.write(String.join(",", estadosAFD.stream().map(estado -> String.join(";", clausuraLambda(estado).stream().map(String::valueOf).collect(Collectors.toList()))).collect(Collectors.toList()));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -194,12 +189,51 @@ public class AFN{
 
 	// Método para calcular la clausura lambda de un conjunto de estados
 	private Set<Integer> clausuraLambda(Set<Integer> estados) {
-		// Implementar el cálculo de la clausura lambda
+		/* Se inicializa un set para guardar la clausura lambda, inicialmente con los estados 
+		dados porque todos los estados tienen clausura lambda con ellos mismos */
+		Set<Integer> clausura = new HashSet<>(estados);
+		// Se inicializa un booleano para saber si hubo un cambio en la clausura
+		boolean cambio = true;
+		while (cambio) {
+			// Verificar si hay cambios en la clausura
+			cambio = false;
+			for (int estado : clausura) {
+				String[] estadosLambda = matrizTransicion[0][estado].split(";");
+				for (String estadoLambda : estadosLambda) {
+					// 
+					if (!estadoLambda.equals("") && clausura.add(Integer.parseInt(estadoLambda))) {
+						cambio = true;
+					}
+				}
+			}
+		}
+		return clausura;
 	}
 
 	// Método para calcular el conjunto de estados alcanzables por un símbolo desde un conjunto de estados
 	private Set<Integer> cambio(Set<Integer> estados, char simbolo) {
-		// Implementar el cálculo del conjunto de estados alcanzables por un símbolo
+		// Se inicializa un set para guardar los estados alcanzables
+		Set<Integer> nuevosEstados = new HashSet<>();
+		for (int estado : estados) {
+			// Se busca el índice del símbolo en el alfabeto
+			int index = searchIndex(alfabeto, simbolo);
+			String[] estadosSiguientes = matrizTransicion[index + 1][estado].split(";");
+			for (String estadoSiguiente : estadosSiguientes) {
+				if (!estadoSiguiente.equals("")) {
+					nuevosEstados.add(Integer.parseInt(estadoSiguiente));
+				}
+			}
+		}
+		return nuevosEstados;
+	}
+
+	private int searchIndex(char[] array, char target) {
+		for (int i = 0; i < array.length; i++) {
+			if (array[i] == target) {
+				return i;
+			}
+		}
+		return -1;
 	}
 	/*
 		El metodo main debe recibir como primer argumento el path
