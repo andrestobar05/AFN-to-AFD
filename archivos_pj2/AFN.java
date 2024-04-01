@@ -14,9 +14,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class AFN{
 
@@ -32,6 +34,7 @@ public class AFN{
     private int[] estadosFinales;
 	private String[][] matrizTransicion;
 	private int estadoInicial = 1;
+	private List<Character> alfabetoAscii;
 
 
 	public AFN(String path){
@@ -59,6 +62,16 @@ public class AFN{
 				matrizTransicion[row][col] = transiciones[col]; // Se guarda la transicion en la matriz
 			}
 		}
+		// Crear el alfabeto ASCII
+		List<Integer> alfabetoAsciiInicial = IntStream.rangeClosed(33, 127)
+			.filter(i -> i != ',')  // Excluir la coma
+			.boxed()
+			.collect(Collectors.toList());
+
+		// Convertir a caracteres
+		alfabetoAscii = alfabetoAsciiInicial.stream()
+			.map(i -> (char) i.intValue())
+			.collect(Collectors.toList());
 	}
 
 
@@ -126,52 +139,76 @@ public class AFN{
 		Map<Set<Integer>, Integer> mapeoEstados = new HashMap<>();
 		// Se inicializa un set de sets para guardar los estados finales del AFD
 		Set<Set<Integer>> estadosFinalesAFD = new HashSet<>();
-
 		// Calcular la clausura lambda del estado inicial
 		Set<Integer> estadoInicialAFD = clausuraLambda(Collections.singleton(estadoInicial));
-
 		// Inicializar la lista de estados del AFD con el estado inicial
 		estadosAFD.add(estadoInicialAFD);
 		mapeoEstados.put(estadoInicialAFD, 1); // estado inicial es 1
-
-		// Calcular los nuevos estados del AFD
 		int nuevoEstado = 2; // comenzar desde 2
 		// Se convierte el arreglo de estados finales a un set para facilitar la búsqueda
 		Set<Integer> estadosFinalesSet = Arrays.stream(estadosFinales).boxed().collect(Collectors.toSet());
 
-		for (Set<Integer> estadoAFD : estadosAFD) {
-			for (char simbolo : alfabeto) {
-				Set<Integer> nuevoEstadoAFD = cambio(estadoAFD, simbolo);
-				nuevoEstadoAFD = clausuraLambda(nuevoEstadoAFD);
+		// Calcular los nuevos estados del AFD
+		boolean seAñadioNuevoEstado;
+		do {
+			seAñadioNuevoEstado = false;
+			Set<Set<Integer>> nuevosEstados = new HashSet<>();
+			for (Set<Integer> estadoAFD : estadosAFD) {
+				for (char simbolo : alfabeto) {
+					Set<Integer> nuevoEstadoAFD = cambio(estadoAFD, simbolo);
+					nuevoEstadoAFD = clausuraLambda(nuevoEstadoAFD);
 
-				if (!estadosAFD.contains(nuevoEstadoAFD)) {
-					estadosAFD.add(nuevoEstadoAFD);
-					mapeoEstados.put(nuevoEstadoAFD, nuevoEstado);
+					if (!estadosAFD.contains(nuevoEstadoAFD) && !nuevosEstados.contains(nuevoEstadoAFD)) {
+						nuevosEstados.add(nuevoEstadoAFD);
+						mapeoEstados.put(nuevoEstadoAFD, nuevoEstado);
+						nuevoEstado++;
+						seAñadioNuevoEstado = true;
+					}
 
 					if (nuevoEstadoAFD.stream().anyMatch(estado -> estadosFinalesSet.contains(estado))) {
 						estadosFinalesAFD.add(nuevoEstadoAFD);
 					}
-
-					nuevoEstado++;
 				}
 			}
-		}
-		// Se escribe el AFD en un archivo
+			estadosAFD.addAll(nuevosEstados);
+		} while (seAñadioNuevoEstado);
+		System.out.println("Estados del AFD: " + estadosAFD);
+		System.out.println("Estados finales del AFD: " + estadosFinalesAFD);
+		System.out.println("Mapeo de estados: " + mapeoEstados);
+
+		/*La primera línea contendrá los símbolos terminales (o el alfabeto de entrada) separados por una “coma”. 
+		Tome en cuenta que el alfabeto de entrada es un subconjunto de los caracteres ASCII den 33 al 127, excluyendo la coma 
+		(“El carácter ‘\n’ no pertenece a este conjunto”). • La segunda línea contendrá la cantidad de estados del afd 
+		(incluido el estado absorbente). La tercera línea contendrá los estados finales separados por una “coma”. Las siguientes 
+		líneas contendrán las filas de la matriz de transición, es decir, contendrán una secuencia de estados destino separados por 
+		comas. Cada fila, tendrá N conjuntos de estados, donde N es el número de estados totales del afd. Además, habrá en 
+		total M filas; una fila por cada símbolo del alfabeto. */
 		try (BufferedWriter bw = new BufferedWriter(new FileWriter(afdPath))) {
 			// Escribir el alfabeto
 			String alfabetoString = new String(alfabeto);
-			bw.write(String.join(",", alfabetoString.chars().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.toList())));
+			String alfabetoOutput = String.join(",", alfabetoString.chars().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.toList()));
+			System.out.println("Alfabeto: " + alfabetoOutput);
+			bw.write(alfabetoOutput);
 			bw.newLine();
+		
 			// Escribir la cantidad de estados
-			bw.write(String.valueOf(estadosAFD.size()));
+			String estadosSize = String.valueOf(estadosAFD.size());
+			System.out.println("Cantidad de estados: " + estadosSize);
+			bw.write(estadosSize);
 			bw.newLine();
+		
 			// Escribir los estados finales
-			bw.write(String.join(",", estadosFinalesAFD.stream().map(estado -> String.valueOf(mapeoEstados.get(estado))).collect(Collectors.toList())));
+			String estadosFinalesOutput = String.join(",", estadosFinalesAFD.stream().map(estado -> String.valueOf(mapeoEstados.get(estado))).collect(Collectors.toList()));
+			System.out.println("Estados finales: " + estadosFinalesOutput);
+			bw.write(estadosFinalesOutput);
 			bw.newLine();
+		
 			// Escribir la matriz de transición
 			for (int i = 0; i < alfabeto.length; i++) {
 				final int symbolIndex = i;
-				bw.write(String.join(",", estadosAFD.stream().map(estado -> String.valueOf(mapeoEstados.get(cambio(estado, alfabeto[symbolIndex])))).collect(Collectors.toList())));
+				String matrizTransicionOutput = String.join(",", estadosAFD.stream().map(estado -> String.valueOf(mapeoEstados.get(cambio(estado, alfabeto[symbolIndex])))).collect(Collectors.toList()));
+				System.out.println("Matriz de transición para el símbolo " + alfabeto[symbolIndex] + ": " + matrizTransicionOutput);
+				bw.write(matrizTransicionOutput);
 				bw.newLine();
 			}
 		} catch (IOException e) {
@@ -273,6 +310,11 @@ public class AFN{
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+		} else if(bandera.equals("-to-afd")){
+			String pathArchivoAFD = args[2];
+			// Crear un AFD con el archivo de entrada
+			afn.toAFD(pathArchivoAFD);
+			System.out.println("Se ha creado el archivo AFD exitosamente.");
 		} else {
 			System.out.println("Bandera no reconocida.");
 		}
