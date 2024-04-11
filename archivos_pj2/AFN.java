@@ -145,9 +145,7 @@ public class AFN{
 	
 		estadosAFD.add(estadoInicialAFD);
 		mapeoEstados.put(estadoInicialAFD, 1); // estado inicial es 1
-		int nuevoEstado = 2; // comenzar desde 2
-		// Se convierte el arreglo de estados finales a un set para facilitar la búsqueda
-		Set<Integer> estadosFinalesSet = Arrays.stream(estadosFinales).boxed().collect(Collectors.toSet());
+		int nuevoEstado = 2;
 	
 		// Calcular los nuevos estados del AFD
 		boolean seAñadioNuevoEstado;
@@ -179,9 +177,6 @@ public class AFN{
 			}
 			
 		} while (seAñadioNuevoEstado);
-		System.out.println("Estados AFD: " + estadosAFD);
-		System.out.println("Mapeo de estados: " + mapeoEstados);
-		System.out.println("Estados finales AFD: " + estadosFinalesAFD);
 	
 		try (BufferedWriter bw = new BufferedWriter(new FileWriter(afdPath))) {
 			String alfabetoString = new String(alfabeto);
