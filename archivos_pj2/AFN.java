@@ -307,7 +307,7 @@ public class AFN{
 			String pathArchivoAFD = args[2];
 			// Crear un AFD con el archivo de entrada
 			afn.toAFD(pathArchivoAFD);
-			System.out.println("Se ha creado el archivo AFD exitosamente.");
+			System.out.printf("Se ha creado el archivo AFD exitosamente en: %s.\n", pathArchivoAFD);
 		} else {
 			System.out.println("Bandera no reconocida.");
 		}
