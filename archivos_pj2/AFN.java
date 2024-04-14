@@ -232,7 +232,7 @@ public class AFN{
 		// Se inicializa un set para guardar los estados alcanzables
 		Set<Integer> nuevosEstados = new HashSet<>();
 		for (int estado : estados) {
-			// Se busca el indice del símbolo en el alfabeto
+			// Se busca el indice del simbolo en el alfabeto
 			int index = searchIndex(alfabeto, simbolo);
 			String[] estadosSiguientes = matrizTransicion[index + 1][estado].split(";");
 			for (String estadoSiguiente : estadosSiguientes) {
