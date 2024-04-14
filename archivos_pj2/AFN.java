@@ -34,7 +34,6 @@ public class AFN{
     private int[] estadosFinales;
 	private String[][] matrizTransicion;
 	private int estadoInicial = 1;
-	private List<Character> alfabetoAscii;
 
 
 	public AFN(String path){
@@ -62,16 +61,6 @@ public class AFN{
 				matrizTransicion[row][col] = transiciones[col]; // Se guarda la transicion en la matriz
 			}
 		}
-		// Crear el alfabeto ASCII
-		List<Integer> alfabetoAsciiInicial = IntStream.rangeClosed(33, 127)
-			.filter(i -> i != ',')  // Excluir la coma
-			.boxed()
-			.collect(Collectors.toList());
-
-		// Convertir a caracteres
-		alfabetoAscii = alfabetoAsciiInicial.stream()
-			.map(i -> (char) i.intValue())
-			.collect(Collectors.toList());
 	}
 
 
@@ -97,6 +86,12 @@ public class AFN{
 		por el AFN. Recuerde lo aprendido en el proyecto 1.
 	*/ 
 	public boolean accept(String cadena) {
+		// Verificar que cada caracter de la cadena esta en el alfabeto
+		for (char c : cadena.toCharArray()) {
+			if (!new String(alfabeto).contains(String.valueOf(c))) {
+				return false;
+			}
+		}
 		/* Se inicializa el conjunto de estados actuales con la clausura lambda del estado inicial
 		   porque puede empezar en un solo estado inicial o en varios estados iniciales por las transiciones lambda  */
 		Set<Integer> estadosActuales = clausuraLambda(Collections.singleton(estadoInicial));
@@ -105,7 +100,7 @@ public class AFN{
 	}
 	
 	private boolean acceptRecursivo(String cadena, Set<Integer> estadosActuales) {
-		// Caso base: Si la cadena está vacía, verificar si el conjunto de estados actuales contiene algún estado final
+		// Caso base: Si la cadena esta vacia, verificar si el conjunto de estados actuales contiene algún estado final
 		if (cadena.isEmpty()) {
 			for (int estadoFinal : estadosFinales) {
 				if (estadosActuales.contains(estadoFinal)) {
@@ -222,7 +217,7 @@ public class AFN{
 			for (int estado : clausura) {
 				String[] estadosLambda = matrizTransicion[0][estado].split(";");
 				for (String estadoLambda : estadosLambda) {
-					// 
+					// Si el estado lambda no esta en la clausura, se agrega y se marca cambio como verdadero
 					if (!estadoLambda.equals("") && clausura.add(Integer.parseInt(estadoLambda))) {
 						cambio = true;
 					}
@@ -232,12 +227,12 @@ public class AFN{
 		return clausura;
 	}
 
-	// Metodo para calcular el conjunto de estados alcanzables por un símbolo desde un conjunto de estados
+	// Metodo para calcular el conjunto de estados alcanzables por un simbolo desde un conjunto de estados
 	private Set<Integer> cambio(Set<Integer> estados, char simbolo) {
 		// Se inicializa un set para guardar los estados alcanzables
 		Set<Integer> nuevosEstados = new HashSet<>();
 		for (int estado : estados) {
-			// Se busca el índice del símbolo en el alfabeto
+			// Se busca el indice del símbolo en el alfabeto
 			int index = searchIndex(alfabeto, simbolo);
 			String[] estadosSiguientes = matrizTransicion[index + 1][estado].split(";");
 			for (String estadoSiguiente : estadosSiguientes) {
@@ -259,37 +254,36 @@ public class AFN{
 	}
 	/*
 		El metodo main debe recibir como primer argumento el path
-		donde se encuentra el archivo ".afd", como segundo argumento 
-		una bandera ("-f" o "-i"). Si la bandera es "-f", debe recibir
-		como tercer argumento el path del archivo con las cuerdas a 
-		evaluar, y si es "-i", debe empezar a evaluar cuerdas ingresadas
-		por el usuario una a una hasta leer una cuerda vacia (""), en cuyo
-		caso debe terminar. Tiene la libertad de implementar este metodo
-		de la forma que desee. 
+		donde se encuentra el archivo ".afd" y debe empezar a evaluar 
+		cuerdas ingresadas por el usuario una a una hasta leer una cuerda vacia (""),
+		en cuyo caso debe terminar. Tiene la libertad de implementar este metodo
+		de la forma que desee. Si se envia la bandera "-to-afd", entonces en vez de
+		evaluar, debe generar un archivo .afd
 	*/
 	public static void main(String[] args) throws Exception{
 		if (args.length < 1) {
-            System.out.println("No se proporciono el archivo de entrada.");
-            return;
-        }
+			System.out.println("No se proporciono el archivo de entrada.");
+			return;
+		}
 		// Crear un AFN con el archivo de entrada
 		AFN afn = new AFN(args[0]);
-		String bandera = args[1];
-		if (bandera.equals("-f")) { // Archivo
-			if (args.length < 3) {
-				System.out.println("No se proporciono el archivo de cuerdas.");
-				return;
+		String bandera = null;
+		if (args.length > 1) {
+			bandera = args[1];
+		}
+		if (bandera != null && bandera.equals("-to-afd")){
+			String pathArchivoAFD = null;
+			if (args.length > 2) {
+				pathArchivoAFD = args[2];
 			}
-			String pathCuerda = args[2];
-			try (BufferedReader br = new BufferedReader(new FileReader(pathCuerda))) {
-				String cuerda;
-				while ((cuerda = br.readLine()) != null) {
-					System.out.println("La cuerda " + (afn.accept(cuerda) ? "es" : "no es") + " aceptada por el AFN.");
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
+			// Si no se da el path, se crea uno por defecto
+			if (pathArchivoAFD == null) {
+				pathArchivoAFD = "./AFDconvertido.afd";
 			}
-		} else if (bandera.equals("-i")) { // Interactivo
+			// Crear un AFD con el archivo de entrada
+			afn.toAFD(pathArchivoAFD);
+			System.out.printf("Se ha creado el archivo AFD exitosamente en: %s.\n", pathArchivoAFD);
+		}else {
 			try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
 				String cuerda;
 				while (true) {
@@ -303,13 +297,6 @@ public class AFN{
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		} else if(bandera.equals("-to-afd")){
-			String pathArchivoAFD = args[2];
-			// Crear un AFD con el archivo de entrada
-			afn.toAFD(pathArchivoAFD);
-			System.out.printf("Se ha creado el archivo AFD exitosamente en: %s.\n", pathArchivoAFD);
-		} else {
-			System.out.println("Bandera no reconocida.");
 		}
 	}
 }
